@@ -14,19 +14,24 @@ Ghi **trước** khi chạy `scripts/pp_sweep.py`, rồi commit và push ngay (l
 
 | Cấu hình | Xóa | Thêm | Sửa | Chi phí |
 |---|---:|---:|---:|---:|
-| Gốc | | | | |
-| `best_config.json` | | | | |
+| Gốc (`score_thr=0.1`, `min_points=0`) | 70 | 13 | 25 | 46.5 |
+| `best_config.json` | 13 | 21 | 18 | 33.9 |
 
-- Tham số đã đổi trong `best_config.json`: ...
-- Kết quả leave-one-out (dán các dòng `scripts/pp_sweep.py` in ra): ...
-- Cấu hình có ổn định trên từng frame không? Vì sao tôi vẫn chọn (hoặc không chọn) nó: ...
+- Tham số đã đổi trong `best_config.json`: `score_thr` 0.1 → 0.5 (`min_points` giữ 0; ở `score_thr=0.5` cả ba giá trị `min_points` 0, 5, 10 đều ra 33.9).
+- Kết quả leave-one-out (dán các dòng `scripts/pp_sweep.py` in ra):
+  ```
+  s01f36: cấu hình chọn {'score_thr': '0.5', 'min_points': '0'} → 7.8 (tốt nhất có thể 7.8)
+  s03f56: cấu hình chọn {'score_thr': '0.5', 'min_points': '0'} → 12.9 (tốt nhất có thể 12.9)
+  s05f16: cấu hình chọn {'score_thr': '0.5', 'min_points': '0'} → 13.2 (tốt nhất có thể 12.6)
+  ```
+- Cấu hình có ổn định trên từng frame không? Vì sao tôi vẫn chọn (hoặc không chọn) nó: Cấu hình `score_thr=0.5, min_points=0` rất ổn định trên từng frame: trong kiểm chứng leave-one-out, cả 3 lần giữ lại 1 frame đều chọn đúng cấu hình này; trên `s01f36` và `s03f56` đạt chi phí tối ưu tuyệt đối (7.8 và 12.9), còn trên `s05f16` đạt 13.2 (chỉ chênh 0.6 điểm so với mức tốt nhất 12.6 ở `score_thr=0.4`). Tôi vẫn chọn cấu hình này vì tổng chi phí thấp nhất (33.9 so với 46.5 của cấu hình gốc) và cho kết quả nhất quán nhất qua leave-one-out.
 
 ## 3. Trước/sau (bước 8)
 
 ![so sánh](../../d14_2A202603145/compare/s01f36.jpg)
 
-- `scripts/pp_compare.py` báo giảm (hoặc tăng) ...% công sửa trên tập A.
-- Dự đoán ở mục 1 đúng hay sai? Giải thích bằng số box xóa/thêm/sửa: ...
+- `scripts/pp_compare.py` báo giảm 27% công sửa trên tập A (46.5 → 33.9 trên 3 frame).
+- Dự đoán ở mục 1 đúng hay sai? Giải thích bằng số box xóa/thêm/sửa: Dự đoán ở mục 1 **đúng về xu hướng chính** (tăng `score_thr` giúp giảm mạnh công sửa nhờ triệt tiêu lượng lớn box thừa), chỉ lệch nhẹ ở mức ngưỡng tối ưu (`0.5` tốt hơn mức dự đoán `0.3–0.4`) và vai trò của `min_points`. Cụ thể, khi tăng `score_thr` từ 0.1 lên 0.5: số box cần xóa giảm mạnh từ **70 → 13** (bớt 57 box thừa) và số box cần sửa giảm từ **25 → 18**, trong khi số box phải thêm chỉ tăng từ **13 → 21** (+8 box). Nhờ lợi ích từ việc giảm xóa và sửa vượt trội phần chi phí thêm mới, tổng chi phí giảm từ **46.5 → 33.9** (-27%). Ở `score_thr=0.5`, các box giữ lại đều đã có đủ điểm LiDAR nên `min_points` (0, 5, 10) cho kết quả như nhau.
 
 ## 4. Tập B
 
@@ -34,9 +39,11 @@ Số đo từ `scripts/pp_prelabel.py --frames d14_2A202603145/frames_B.txt --co
 
 | Xóa | Thêm | Sửa | Chi phí |
 |---:|---:|---:|---:|
-| | | | |
+| 4 | 4 | 1 | 5.7 |
 
-- Loại box tốn công sửa nhất ở tập B: ...
+(12 frame, GT 160 hộp, khớp 156.)
+
+- Loại box tốn công sửa nhất ở tập B: Các box bị sót phải **thêm mới** (4 box = 4.0/5.7 điểm chi phí, chiếm ~70% tổng công sửa), chủ yếu là xe cỡ lớn thuộc lớp `Bus` (2 box) và `Truck` (1 box) do model PointPillars KITTI không có 2 lớp này, cùng các box bị lọc mất do ngưỡng `score_thr=0.5` cao.
 
 ## 5. Giới hạn
 
